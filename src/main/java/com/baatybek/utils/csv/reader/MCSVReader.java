@@ -1,6 +1,6 @@
-package com.baatybek.csv.reader;
+package com.baatybek.utils.csv.reader;
 
-import com.baatybek.csv.model.CSVModel;
+import com.baatybek.utils.csv.model.CSVModel;
 import com.opencsv.bean.CsvToBeanBuilder;
 
 import java.io.Reader;

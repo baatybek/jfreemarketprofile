@@ -1,4 +1,4 @@
-package com.baatybek.csv.model;
+package com.baatybek.utils.csv.model;
 
 import com.opencsv.bean.CsvBindByPosition;
 

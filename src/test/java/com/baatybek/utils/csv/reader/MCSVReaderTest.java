@@ -1,6 +1,8 @@
-package com.baatybek.csv.reader;
+package com.baatybek.utils.csv.reader;
 
-import com.baatybek.csv.model.CSVModel;
+import com.baatybek.properties.ConstProperties;
+import com.baatybek.utils.csv.model.CSVModel;
+import com.baatybek.utils.csv.reader.MCSVReader;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -12,7 +14,7 @@ import java.util.List;
 public class MCSVReaderTest {
     @Test
     public void readAllTest() throws Exception {
-        FileReader fileReader = new FileReader("/home/baatybek/Workspaces/Thesis/jfreemarketprofile/src/test/resources/csv/readertest.csv");
+        FileReader fileReader = new FileReader(ConstProperties.DATASET_PATH);
         List<CSVModel> expected = new ArrayList<>(Arrays.asList(
                 new CSVModel("2021-07-08 09:30:00","428.78","429.07","428.4","429.01","1271900"),
                 new CSVModel("2021-07-08 09:31:00","429.01","429.22","428.99","429.11","561400"),
