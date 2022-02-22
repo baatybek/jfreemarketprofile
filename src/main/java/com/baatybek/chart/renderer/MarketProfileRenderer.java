@@ -12,47 +12,68 @@ import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.util.PublicCloneable;
+import org.jfree.data.xy.OHLCDataItem;
 import org.jfree.data.xy.OHLCDataset;
 import org.jfree.data.xy.XYDataset;
 
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.io.Serializable;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
 
 public class MarketProfileRenderer  extends AbstractXYItemRenderer implements XYItemRenderer, Cloneable, PublicCloneable, Serializable {
     private static final long serialVersionUID = 914108561834089247L;
     private final int minInMilliSec = 60000;
-    private double componentHeight = 1.0D;
-    Map<Double, Integer> priceTimeCountMap = new HashMap<>();
-
-    public MarketProfileRenderer() {
-        XYToolTipGenerator toolTipGenerator = new HighLowItemLabelGenerator();
-        this.setDefaultToolTipGenerator(toolTipGenerator);
+    private TimeBracketType type;
+    private int timeBracketUnits;
+    private double tickSize;
+    Map<Double, Item> mmmap = new HashMap<>();
+    public enum TimeBracketType {
+        MINUTE,
+        HOUR,
+        MONTH,
+        YEAR
     }
 
-    private double roundValue(double value) {
-        return Math.round(value * 2)/2.0;
+    class Item {
+        public Queue<OHLCDataItem> itemsQueue = new LinkedList<>();
+        public Item add(OHLCDataItem dataItem) {
+            itemsQueue.add(dataItem);
+            return this;
+        }
+    }
+
+    private double roundValueToTickSize(double value) {
+        double factor = 1 / tickSize;
+        return Math.round(value * factor) / factor;
+    }
+
+    public MarketProfileRenderer() {
+        this(0.05D, TimeBracketType.MINUTE, 1);
+    }
+
+    public MarketProfileRenderer(double tickSize, TimeBracketType type, int timeBracketUnits) {
+        this.tickSize = tickSize;
+        this.type = type;
+        this.timeBracketUnits = timeBracketUnits;
     }
 
     @Override
     public XYItemRendererState initialise(Graphics2D g2, Rectangle2D dataArea, XYPlot plot, XYDataset dataset, PlotRenderingInfo info) {
-        componentHeight = 1/Math.pow(10, 1);
         OHLCDataset ohlcDataset = (OHLCDataset) dataset;
-        priceTimeCountMap = new HashMap<>();
         for(int i = 0; i < ohlcDataset.getItemCount(0); i++) {
-            double close = roundValue(ohlcDataset.getCloseValue(0, i));
-            priceTimeCountMap.computeIfPresent(close, (k, v) -> v + 1);
-            priceTimeCountMap.putIfAbsent(close, 1);
+            Date date = new Date();
+            date.setTime(ohlcDataset.getX(0, i).longValue());
+            OHLCDataItem dataItem = new OHLCDataItem(date, ohlcDataset.getOpenValue(0, i),
+                    ohlcDataset.getHighValue(0, i),
+                    ohlcDataset.getLowValue(0, i),
+                    ohlcDataset.getCloseValue(0, i),
+                    ohlcDataset.getVolumeValue(0, i));
+
+
         }
         return super.initialise(g2, dataArea, plot, dataset, info);
-    }
-
-    @Override
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
     }
 
     @Override
@@ -62,37 +83,11 @@ public class MarketProfileRenderer  extends AbstractXYItemRenderer implements XY
     {
         OHLCDataset dataset = (OHLCDataset) xyDataset;
 
-        double closePrice = roundValue(dataset.getCloseValue(series, item));
-        RectangleEdge rangeEdge = plot.getRangeAxisEdge();
-        double yValJava2D = rangeAxis.valueToJava2D(closePrice, dataArea, rangeEdge);
-        double heightJava2D = rangeAxis.lengthToJava2D(componentHeight, dataArea, rangeEdge);
 
-        int order = priceTimeCountMap.get(closePrice);
-        priceTimeCountMap.computeIfPresent(closePrice, (k, v) -> v - 1);
-        double lowerbound = dataset.getXValue(0, 0);
+    }
 
-        double timeMillis = lowerbound + minInMilliSec * 1 * (order - 1);
-        RectangleEdge domainEdge = plot.getDomainAxisEdge();
-        double xValeJava2D = domainAxis.valueToJava2D(timeMillis, dataArea, domainEdge);
-        double widthJava2D = domainAxis.lengthToJava2D(minInMilliSec * 1 , dataArea, domainEdge);
-
-        Number dateTimeNum = timeMillis;
-        Date dateTime = new Date();
-        dateTime.setTime(dateTimeNum.longValue());
-        //System.out.println(DateTimeUtility.DEFAULT_DATE_TIME_FORMAT.format(dateTime) + "=" + closePrice);
-
-        Paint paint = this.getItemPaint(series, item);
-        g2.setPaint(paint);
-
-        Rectangle2D.Double body = null;
-        if(plot.getOrientation() == PlotOrientation.HORIZONTAL) {
-            body = new Rectangle2D.Double(yValJava2D, xValeJava2D, heightJava2D, widthJava2D);
-        }
-        if(plot.getOrientation() == PlotOrientation.VERTICAL) {
-            body = new Rectangle2D.Double(xValeJava2D, yValJava2D, widthJava2D, heightJava2D);
-        }
-
-        g2.fill(body);
-        g2.draw(body);
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
 }
