@@ -25,56 +25,37 @@ import java.util.List;
 public class MarketProfileRenderer  extends AbstractXYItemRenderer implements XYItemRenderer, Cloneable, PublicCloneable, Serializable {
     private static final long serialVersionUID = 914108561834089247L;
     private final int minInMilliSec = 60000;
-    private TimeBracketType type;
     private int timeBracketUnits;
     private double tickSize;
-    Map<Double, Item> mmmap = new HashMap<>();
-    public enum TimeBracketType {
-        MINUTE,
-        HOUR,
-        MONTH,
-        YEAR
-    }
-
-    class Item {
-        public Queue<OHLCDataItem> itemsQueue = new LinkedList<>();
-        public Item add(OHLCDataItem dataItem) {
-            itemsQueue.add(dataItem);
-            return this;
-        }
-    }
+    private List<Double> startXList = new ArrayList<>();
+    private Map<Double, Double> xValMap = new HashMap<>();
+    private Double startDate;
 
     private double roundValueToTickSize(double value) {
-        double factor = 1 / tickSize;
-        return Math.round(value * factor) / factor;
+        return Math.round(value/tickSize) * tickSize;
     }
 
     public MarketProfileRenderer() {
-        this(0.05D, TimeBracketType.MINUTE, 1);
+        this(0.05);
     }
 
-    public MarketProfileRenderer(double tickSize, TimeBracketType type, int timeBracketUnits) {
+    public MarketProfileRenderer(double tickSize) {
         this.tickSize = tickSize;
-        this.type = type;
-        this.timeBracketUnits = timeBracketUnits;
     }
+
 
     @Override
-    public XYItemRendererState initialise(Graphics2D g2, Rectangle2D dataArea, XYPlot plot, XYDataset dataset, PlotRenderingInfo info) {
-        OHLCDataset ohlcDataset = (OHLCDataset) dataset;
-        for(int i = 0; i < ohlcDataset.getItemCount(0); i++) {
-            Date date = new Date();
-            date.setTime(ohlcDataset.getX(0, i).longValue());
-            OHLCDataItem dataItem = new OHLCDataItem(date, ohlcDataset.getOpenValue(0, i),
-                    ohlcDataset.getHighValue(0, i),
-                    ohlcDataset.getLowValue(0, i),
-                    ohlcDataset.getCloseValue(0, i),
-                    ohlcDataset.getVolumeValue(0, i));
-
-
+    public XYItemRendererState initialise(Graphics2D g2, Rectangle2D dataArea, XYPlot plot, XYDataset xyDataset, PlotRenderingInfo info) {
+        startXList.clear();
+        xValMap.clear();
+        startDate = xyDataset.getXValue(0, 0);
+        int series = xyDataset.getSeriesCount();
+        for(int i = 0; i < series; i++) {
+            startXList.add(xyDataset.getXValue(0, 0));
         }
-        return super.initialise(g2, dataArea, plot, dataset, info);
+        return super.initialise(g2, dataArea, plot, xyDataset, info);
     }
+
 
     @Override
     public void drawItem(Graphics2D g2, XYItemRendererState state, Rectangle2D dataArea,
@@ -83,7 +64,32 @@ public class MarketProfileRenderer  extends AbstractXYItemRenderer implements XY
     {
         OHLCDataset dataset = (OHLCDataset) xyDataset;
 
+        double low = dataset.getLowValue(series, item);
+        double high = dataset.getHighValue(series, item);
 
+        low = roundValueToTickSize(low);
+        high = roundValueToTickSize(high);
+        char symbol = 'A';
+        symbol += (long)(dataset.getXValue(series, item) - startDate)/minInMilliSec;
+        System.out.println(symbol);
+        for(double currLow = low; currLow < high; currLow = currLow + tickSize) {
+            xValMap.putIfAbsent(currLow, startXList.get(series));
+            double xVal = xValMap.get(currLow);
+            xValMap.put(currLow, xVal + minInMilliSec);
+            drawSingleItem(currLow, xVal, symbol, g2, dataArea, plot, domainAxis, rangeAxis);
+        }
+
+    }
+
+    private void drawSingleItem(double yVal, double xVal, char symbol, Graphics2D g2,
+                                Rectangle2D dataArea, XYPlot plot, ValueAxis domainAxis, ValueAxis rangeAxis) {
+
+        RectangleEdge rangeEdge = plot.getRangeAxisEdge();
+        double yValJava2D = rangeAxis.valueToJava2D(yVal, dataArea, rangeEdge);
+
+        RectangleEdge domainEdge = plot.getDomainAxisEdge();
+        double xValJava2D = domainAxis.valueToJava2D(xVal, dataArea, domainEdge);
+        g2.drawString(Character.toString(symbol), (float) xValJava2D,(float) yValJava2D);
     }
 
     @Override
