@@ -14,7 +14,7 @@ import java.util.List;
 
 public final class OHLCDataGenerator {
 
-    private static String datasetPath = "/home/baatybek/Workspaces/Thesis/dev/jfreemarketprofile/src/main/resources/csv/ohlc-dataset-30min.csv";
+    private static String datasetPath = "/home/baatybek/Workspaces/Thesis/dev/jfreemarketprofile/src/main/resources/csv/ohlc-dataset.csv";
 
     public static OHLCDataset generate() throws Exception {
         List<CSVModel> csvData = readDataFromCSV();

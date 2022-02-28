@@ -1,5 +1,6 @@
 package com.baatybek.demo;
 
+import com.baatybek.chart.renderer.MarketProfileExp;
 import com.baatybek.chart.renderer.MarketProfileRenderer;
 import com.baatybek.utils.data.OHLCDataGenerator;
 import org.jfree.chart.ChartPanel;
@@ -42,7 +43,7 @@ public class MarketProfileDemo extends ApplicationFrame {
         OHLCDataset dataset = OHLCDataGenerator.generate();
 
         plot.setDataset(0, dataset);
-        plot.setRenderer(0, new MarketProfileRenderer());
+        plot.setRenderer(0, new MarketProfileExp(0.05));
 
         if(withCandlestickRenderer) {
             plot.setDataset(1, dataset);
