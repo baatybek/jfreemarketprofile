@@ -127,7 +127,6 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
             Date date = new Date();
             date.setTime((long) xValue);
             symbol = getSymbol(symbol);
-            System.out.println(symbol);
 
             if(xValue >= xValueLowerBound + timeFrame * minInMilliSec) {
                 xValueLowerBound = xValue;
