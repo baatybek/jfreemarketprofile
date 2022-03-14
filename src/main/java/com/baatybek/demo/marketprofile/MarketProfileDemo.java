@@ -35,7 +35,7 @@ public class MarketProfileDemo extends ApplicationFrame {
         OHLCDataset dataset = OHLCDataGenerator.generate();
 
         // renderer
-        MarketProfileRenderer renderer = new MarketProfileRenderer();
+        MarketProfileRenderer renderer = new MarketProfileRenderer(30);
 
         // plot
         ValueAxis timeAxis = new DateAxis("Time");

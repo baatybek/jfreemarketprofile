@@ -1,8 +1,6 @@
 package com.baatybek.renderer;
 
-import com.baatybek.utils.datetime.DateTimeUtility;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.TickUnits;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.CrosshairState;
 import org.jfree.chart.plot.PlotRenderingInfo;
@@ -12,90 +10,142 @@ import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.util.PublicCloneable;
-import org.jfree.data.time.DateRange;
 import org.jfree.data.xy.OHLCDataset;
 import org.jfree.data.xy.XYDataset;
 
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.io.Serializable;
-import java.util.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYItemRenderer, Cloneable, PublicCloneable, Serializable {
-    private double tickSize;
-    private List<SeriesChartData> seriesChartData = new ArrayList<>();
+    private BigDecimal tickSize;
+    private final int timeFrame;
+    private final double minInMilliSec = 60000D;
+    private double offsetDomainAxis = 1 * minInMilliSec;
+    private List<ChartItemsCollection> chartItemsCollections;
 
-    private class SeriesChartData {
-        private List<ChartItem> data;
-        public SeriesChartData(List<ChartItem> data) {
-            this.data = data;
+    public MarketProfileRenderer(int timeFrame) {
+        this.timeFrame = timeFrame;
+    }
+
+    private BigDecimal roundValueWithTickSize(double val) {
+        double round = Math.round(val/tickSize.doubleValue()) * tickSize.doubleValue();
+        BigDecimal bd = new BigDecimal(round);
+        bd = bd.setScale(tickSize.scale(), RoundingMode.HALF_UP);
+        return bd;
+    }
+
+    private class ChartItem {
+        private double xValue;
+        private double low;
+        private double high;
+        private char symbol;
+
+        public ChartItem(double xValue, double low, double high, char symbol) {
+            this.xValue = xValue;
+            this.low = low;
+            this.high = high;
+            this.symbol = symbol;
         }
 
+        public char getSymbol() {
+            return symbol;
+        }
+
+        public double getXValue() {
+            return xValue;
+        }
+
+        public double getLow() {
+            return low;
+        }
+
+        public double getHigh() {
+            return high;
+        }
+    }
+
+    private class ChartItemsCollection {
+        private java.util.List<ChartItem> data;
+        public ChartItemsCollection(java.util.List<ChartItem> data) {
+            this.data = data;
+        }
         public List<ChartItem> getData() {
             return data;
         }
     }
 
+    private char getSymbol(char symbol) {
+        if(symbol == '#') {
+            return 'A';
+        }
+
+        if(symbol >= 'A' && symbol < 'Z') {
+            return (char) (symbol + 1);
+        } else if(symbol >= 'a' && symbol < 'z') {
+            return (char) (symbol + 1);
+        }
+
+        if(symbol == 'Z') {
+            return 'a';
+        } else if(symbol == 'z') {
+            return 'A';
+        }
+
+        return '#';
+    }
+
     @Override
     public XYItemRendererState initialise(Graphics2D g2, Rectangle2D dataArea, XYPlot plot, XYDataset xyDataset, PlotRenderingInfo info) {
         NumberAxis rangeAxis = (NumberAxis)plot.getRangeAxis();
-        tickSize = rangeAxis.getTickUnit().getSize();
+        double tick = rangeAxis.getTickUnit().getSize();
+        tickSize = new BigDecimal(Double.toString(tick));
 
-        seriesChartData.clear();
+        chartItemsCollections = new ArrayList<>();
+
         OHLCDataset dataset = (OHLCDataset) xyDataset;
-        double xValMax = dataset.getXValue(0, 0);;
+        int series = 0;
+        Map<BigDecimal, ChartItem> chartItemMap = new HashMap<>();
+        double xValueLowerBound = dataset.getXValue(series, 0);
+        char symbol = '#';
 
-        for(int series = 0; series < dataset.getSeriesCount(); series++) {
+        for(int item = 0; item < dataset.getItemCount(series); item++) {
+            double xValue = dataset.getXValue(series, item);
+            symbol = getSymbol(symbol);
 
-            double xLowerBound = dataset.getXValue(series, 0);
-            xValMax = xLowerBound;
-
-            Map<Double, ChartItem> chartItemMap = new HashMap<>();
-
-            for(int item = 0; item < dataset.getItemCount(series); item++) {
-
-                double low = dataset.getLowValue(series, item);
-                low = roundValuesWithTickSize(low);
-                double high = dataset.getHighValue(series, item);
-                high = roundValuesWithTickSize(high);
-
-                char symbol = getSymbol(xLowerBound, dataset.getXValue(series, item));
-
-                List<ChartItem> chartItemList = new ArrayList<>();
-                for(double curr = low; curr < high; curr = curr + tickSize) {
-                    chartItemMap.putIfAbsent(curr, new ChartItem(symbol, xLowerBound, curr));
-                    ChartItem currItem = chartItemMap.get(curr);
-                    chartItemList.add(currItem);
-
-                    double nextXVal = currItem.xValue + 60 * 1000;
-                    chartItemMap.put(curr, new ChartItem(symbol, nextXVal, curr));
-
-                    xValMax = Math.max(xValMax, nextXVal);
-                }
-
-                seriesChartData.add(new SeriesChartData(chartItemList));
+            if(xValue >= xValueLowerBound + timeFrame * minInMilliSec) {
+                xValueLowerBound = xValue;
+                symbol = 'A';
+                chartItemMap.clear();
             }
+
+            double low = dataset.getLowValue(series, item);
+            BigDecimal lowBD = roundValueWithTickSize(low);
+
+            double high = dataset.getHighValue(series, item);
+            BigDecimal highBD = roundValueWithTickSize(high);
+
+            List<ChartItem> chartItemsList = new ArrayList<>();
+
+            while (highBD.compareTo(lowBD) > 0) {
+                chartItemMap.putIfAbsent(lowBD, new ChartItem(xValueLowerBound, lowBD.doubleValue(), lowBD.doubleValue() + tickSize.doubleValue(), symbol));
+                ChartItem currItem = chartItemMap.get(lowBD);
+                chartItemsList.add(currItem);
+
+                double nextXVal = currItem.getXValue() + minInMilliSec + offsetDomainAxis;
+                chartItemMap.put(lowBD, new ChartItem(nextXVal, lowBD.doubleValue(), lowBD.doubleValue() + tickSize.doubleValue(), symbol));
+                lowBD = lowBD.add(tickSize);
+            }
+            chartItemsCollections.add(new ChartItemsCollection(chartItemsList));
         }
 
-        double lower = dataset.getXValue(0, 0);
-        plot.getDomainAxis().setRange(new DateRange(lower, xValMax));
         return new XYItemRendererState(info);
-    }
-
-    private char getSymbol(double lowerBound, double current) {
-        long lower = (long) lowerBound;
-        long curr = (long) current;
-        long factor = ((curr - lower)/60000) % 50;
-
-        if(factor <= 25) {
-            return (char) ('A' + factor);
-        }
-        return (char) (factor - 26 + 'a');
-    }
-
-    private double roundValuesWithTickSize(double val) {
-        return Math.round(val/tickSize) * tickSize;
     }
 
     @Override
@@ -106,53 +156,26 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
         RectangleEdge rangeEdge = plot.getRangeAxisEdge();
         RectangleEdge domainEdge = plot.getDomainAxisEdge();
 
-        List<ChartItem> chartItemList = seriesChartData.get(item).getData();
+        List<ChartItem> chartItemList = chartItemsCollections.get(item).getData();
         for(ChartItem chartItem : chartItemList) {
             drawChartItem(chartItem, g2, domainEdge, rangeEdge, dataArea, domainAxis, rangeAxis);
         }
     }
-
     private void drawChartItem(ChartItem chartItem, Graphics2D g2, RectangleEdge domainEdge, RectangleEdge rangeEdge,
                                Rectangle2D dataArea, ValueAxis domainAxis, ValueAxis rangeAxis)
     {
-        double xJ2D = domainAxis.valueToJava2D(chartItem.getXValue(), dataArea, domainEdge);
-        double yJ2D = rangeAxis.valueToJava2D(chartItem.getYValue(), dataArea, rangeEdge);
+        double y = chartItem.getHigh();
+        double x = chartItem.getXValue();
         String text = Character.toString(chartItem.getSymbol());
 
-        Date date = new Date();
-        date.setTime((long) chartItem.getXValue());
-        String dateStr = DateTimeUtility.DEFAULT_DATE_TIME_FORMAT.format(date);
+        double yJ2D = rangeAxis.valueToJava2D(y, dataArea, rangeEdge);
+        double xJ2D = domainAxis.valueToJava2D(x, dataArea, domainEdge);
 
-        System.out.println("Symbol = " + chartItem.getSymbol() + " dateTime = " + dateStr);
         g2.drawString(text, (float) xJ2D, (float) yJ2D);
     }
 
     @Override
     public Object clone() throws CloneNotSupportedException {
         return super.clone();
-    }
-
-    private class ChartItem {
-        private char symbol;
-        private double xValue;
-        private double yValue;
-
-        public char getSymbol() {
-            return symbol;
-        }
-
-        public double getXValue() {
-            return xValue;
-        }
-
-        public double getYValue() {
-            return yValue;
-        }
-
-        public ChartItem(char symbol, double xValue, double yValue) {
-            this.symbol = symbol;
-            this.xValue = xValue;
-            this.yValue = yValue;
-        }
     }
 }
