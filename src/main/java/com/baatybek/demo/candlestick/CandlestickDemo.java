@@ -28,7 +28,7 @@ public class CandlestickDemo extends ApplicationFrame {
 
     private static JFreeChart createCandleStickChart() throws Exception {
         // Dataset
-        OHLCDataset dataset = DataGenerator.generate();
+        OHLCDataset dataset = DataGenerator.generateDefaultHighLowDataset();
 
         // Plot
         ValueAxis timeAxis = new DateAxis("Time");

@@ -32,7 +32,7 @@ public class MarketProfileDemo extends ApplicationFrame {
 
     private static JFreeChart createMPChart() throws Exception {
         // dataset
-        OHLCDataset dataset = DataGenerator.generate();
+        OHLCDataset dataset = DataGenerator.generateDefaultHighLowDataset();
 
         // renderer
         MarketProfileRenderer renderer = new MarketProfileRenderer(30);

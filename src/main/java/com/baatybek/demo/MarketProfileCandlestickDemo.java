@@ -29,7 +29,7 @@ public class MarketProfileCandlestickDemo extends ApplicationFrame {
 
     private static JFreeChart createChart() throws Exception {
         // Dataset
-        OHLCDataset dataset = DataGenerator.generate();
+        OHLCDataset dataset = DataGenerator.generateDefaultHighLowDataset();
 
         // Plot
         ValueAxis timeAxis = new DateAxis("Time");
