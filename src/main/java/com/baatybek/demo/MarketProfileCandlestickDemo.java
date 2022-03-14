@@ -41,10 +41,10 @@ public class MarketProfileCandlestickDemo extends ApplicationFrame {
         plot.setDomainPannable(true);
 
         plot.setDataset(0, dataset);
-        plot.setRenderer(0, new CandlestickRenderer());
+        plot.setRenderer(0, new MarketProfileRenderer(30));
 
         plot.setDataset(1, dataset);
-        plot.setRenderer(1, new MarketProfileRenderer(30));
+        plot.setRenderer(1, new CandlestickRenderer());
 
         return new JFreeChart(
                 "Candlestick and MarketProfile Demo",
