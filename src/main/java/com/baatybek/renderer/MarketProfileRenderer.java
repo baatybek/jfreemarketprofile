@@ -9,6 +9,7 @@ import org.jfree.chart.renderer.xy.AbstractXYItemRenderer;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.chart.ui.RectangleEdge;
+import org.jfree.chart.util.Args;
 import org.jfree.chart.util.PublicCloneable;
 import org.jfree.data.xy.OHLCDataset;
 import org.jfree.data.xy.XYDataset;
@@ -27,9 +28,38 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
     private final double minInMilliSec = 60000D;
     private double offsetDomainAxis = 1 * minInMilliSec;
     private List<ChartItemsCollection> chartItemsCollections;
+    private boolean drawVolume;
+    private transient Paint volumePaint;
+    private transient double maxVolume = 0.0D;
 
     public MarketProfileRenderer(int timeFrame) {
+        this(timeFrame, true);
+    }
+    public MarketProfileRenderer(int timeFrame, boolean drawVolume) {
         this.timeFrame = timeFrame;
+        this.drawVolume = drawVolume;
+        this.volumePaint = Color.GRAY;
+    }
+
+    public boolean getDrawVolume() {
+        return this.drawVolume;
+    }
+
+    public void setDrawVolume(boolean drawVolume) {
+        if (this.drawVolume != drawVolume) {
+            this.drawVolume = drawVolume;
+            this.fireChangeEvent();
+        }
+    }
+
+    public Paint getVolumePaint() {
+        return this.volumePaint;
+    }
+
+    public void setVolumePaint(Paint paint) {
+        Args.nullNotPermitted(paint, "paint");
+        this.volumePaint = paint;
+        this.fireChangeEvent();
     }
 
     private BigDecimal roundValueWithTickSize(double val) {
@@ -108,8 +138,6 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
 
     @Override
     public XYItemRendererState initialise(Graphics2D g2, Rectangle2D dataArea, XYPlot plot, XYDataset xyDataset, PlotRenderingInfo info) {
-        setUpFont(g2);
-
         NumberAxis rangeAxis = (NumberAxis)plot.getRangeAxis();
         double tick = rangeAxis.getTickUnit().getSize();
         tickSize = new BigDecimal(Double.toString(tick));
@@ -152,6 +180,13 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
                 lowBD = lowBD.add(tickSize);
             }
             chartItemsCollections.add(new ChartItemsCollection(chartItemsList));
+
+            if(drawVolume) {
+                double volume = dataset.getVolumeValue(series, item);
+                if (volume > this.maxVolume) {
+                    this.maxVolume = volume;
+                }
+            }
         }
 
         return new XYItemRendererState(info);
@@ -165,11 +200,18 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
         RectangleEdge rangeEdge = plot.getRangeAxisEdge();
         RectangleEdge domainEdge = plot.getDomainAxisEdge();
 
+        setUpFont(g2);
+
         List<ChartItem> chartItemList = chartItemsCollections.get(item).getData();
         for(ChartItem chartItem : chartItemList) {
             drawChartItem(chartItem, g2, domainEdge, rangeEdge, dataArea, domainAxis, rangeAxis);
         }
+
+        if(drawVolume) {
+            drawVolumeItem((OHLCDataset) xyDataset, dataArea, g2, domainEdge, domainAxis, series, item);
+        }
     }
+
     private void drawChartItem(ChartItem chartItem, Graphics2D g2, RectangleEdge domainEdge, RectangleEdge rangeEdge,
                                Rectangle2D dataArea, ValueAxis domainAxis, ValueAxis rangeAxis)
     {
@@ -181,6 +223,27 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
         double xJ2D = domainAxis.valueToJava2D(x, dataArea, domainEdge);
 
         g2.drawString(text, (float) xJ2D, (float) yJ2D);
+    }
+
+    private void drawVolumeItem(OHLCDataset dataset, Rectangle2D dataArea, Graphics2D g2, RectangleEdge domainEdge, ValueAxis domainAxis, int series, int item) {
+        double volume = dataset.getVolumeValue(series, item);
+        double volumeHeight = volume/maxVolume;
+        double min = dataArea.getMinY();
+        double max = dataArea.getMaxY();
+
+        double volumeY = volumeHeight * (max - min);
+        double volumeYY = max - volumeY;
+
+        double x = dataset.getXValue(series, item);
+        double xJ2D = domainAxis.valueToJava2D(x, dataArea, domainEdge);
+
+        g2.setPaint(this.getVolumePaint());
+        Composite originalComposite = g2.getComposite();
+        g2.setComposite(AlphaComposite.getInstance(3, 0.3F));
+
+        double volumeWidth = 3.0D;
+        g2.fill(new Rectangle2D.Double(xJ2D, volumeYY, volumeWidth, volumeY));
+        g2.setComposite(originalComposite);
     }
 
     @Override
