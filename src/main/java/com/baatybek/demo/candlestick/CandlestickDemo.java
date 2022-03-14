@@ -1,6 +1,6 @@
 package com.baatybek.demo.candlestick;
 
-import com.baatybek.dataset.OHLCDataGenerator;
+import com.baatybek.dataset.DataGenerator;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
@@ -28,7 +28,7 @@ public class CandlestickDemo extends ApplicationFrame {
 
     private static JFreeChart createCandleStickChart() throws Exception {
         // Dataset
-        OHLCDataset dataset = OHLCDataGenerator.generate();
+        OHLCDataset dataset = DataGenerator.generateDefaultHighLowDataset();
 
         // Plot
         ValueAxis timeAxis = new DateAxis("Time");

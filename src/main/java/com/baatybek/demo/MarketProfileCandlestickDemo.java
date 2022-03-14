@@ -1,6 +1,6 @@
 package com.baatybek.demo;
 
-import com.baatybek.dataset.OHLCDataGenerator;
+import com.baatybek.dataset.DataGenerator;
 import com.baatybek.renderer.MarketProfileRenderer;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -29,7 +29,7 @@ public class MarketProfileCandlestickDemo extends ApplicationFrame {
 
     private static JFreeChart createChart() throws Exception {
         // Dataset
-        OHLCDataset dataset = OHLCDataGenerator.generate();
+        OHLCDataset dataset = DataGenerator.generateDefaultHighLowDataset();
 
         // Plot
         ValueAxis timeAxis = new DateAxis("Time");
