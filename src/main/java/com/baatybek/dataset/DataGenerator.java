@@ -15,7 +15,7 @@ import java.net.URL;
 import java.nio.file.Paths;
 import java.util.List;
 
-public final class OHLCDataGenerator {
+public final class DataGenerator {
 
     public static OHLCDataset generate() throws Exception {
         List<CSVModel> csvData = readDataFromCSV();
@@ -32,7 +32,7 @@ public final class OHLCDataGenerator {
     }
 
     private static List<CSVModel> readDataFromCSV() throws Exception {
-        URL res = OHLCDataGenerator.class.getClassLoader().getResource("csv/ohlc-dataset.csv");
+        URL res = DataGenerator.class.getClassLoader().getResource("csv/ohlc-dataset.csv");
         assert res != null;
         File file = Paths.get(res.toURI()).toFile();
         FileReader fileReader = new FileReader(file);

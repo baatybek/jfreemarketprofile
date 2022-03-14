@@ -1,6 +1,6 @@
 package com.baatybek.demo.marketprofile;
 
-import com.baatybek.dataset.OHLCDataGenerator;
+import com.baatybek.dataset.DataGenerator;
 import com.baatybek.renderer.MarketProfileRenderer;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -32,7 +32,7 @@ public class MarketProfileDemo extends ApplicationFrame {
 
     private static JFreeChart createMPChart() throws Exception {
         // dataset
-        OHLCDataset dataset = OHLCDataGenerator.generate();
+        OHLCDataset dataset = DataGenerator.generate();
 
         // renderer
         MarketProfileRenderer renderer = new MarketProfileRenderer(30);
