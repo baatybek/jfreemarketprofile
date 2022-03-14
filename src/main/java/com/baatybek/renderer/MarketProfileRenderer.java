@@ -18,10 +18,8 @@ import java.awt.geom.Rectangle2D;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYItemRenderer, Cloneable, PublicCloneable, Serializable {
     private BigDecimal tickSize;
@@ -101,8 +99,17 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
         return '#';
     }
 
+    private void setUpFont(Graphics2D g2) {
+        String fontName = g2.getFont().toString();
+        int fontSize = g2.getFont().getSize();
+        g2.setFont(new Font(fontName, Font.BOLD, fontSize));
+        g2.setColor(Color.black);
+    }
+
     @Override
     public XYItemRendererState initialise(Graphics2D g2, Rectangle2D dataArea, XYPlot plot, XYDataset xyDataset, PlotRenderingInfo info) {
+        setUpFont(g2);
+
         NumberAxis rangeAxis = (NumberAxis)plot.getRangeAxis();
         double tick = rangeAxis.getTickUnit().getSize();
         tickSize = new BigDecimal(Double.toString(tick));
@@ -111,18 +118,21 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
 
         OHLCDataset dataset = (OHLCDataset) xyDataset;
         int series = 0;
-        Map<BigDecimal, ChartItem> chartItemMap = new HashMap<>();
+        Map<BigDecimal, Double> xValsMap = new HashMap<>();
         double xValueLowerBound = dataset.getXValue(series, 0);
         char symbol = '#';
 
         for(int item = 0; item < dataset.getItemCount(series); item++) {
             double xValue = dataset.getXValue(series, item);
+            Date date = new Date();
+            date.setTime((long) xValue);
             symbol = getSymbol(symbol);
+            System.out.println(symbol);
 
             if(xValue >= xValueLowerBound + timeFrame * minInMilliSec) {
                 xValueLowerBound = xValue;
                 symbol = 'A';
-                chartItemMap.clear();
+                xValsMap.clear();
             }
 
             double low = dataset.getLowValue(series, item);
@@ -134,12 +144,12 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
             List<ChartItem> chartItemsList = new ArrayList<>();
 
             while (highBD.compareTo(lowBD) > 0) {
-                chartItemMap.putIfAbsent(lowBD, new ChartItem(xValueLowerBound, lowBD.doubleValue(), lowBD.doubleValue() + tickSize.doubleValue(), symbol));
-                ChartItem currItem = chartItemMap.get(lowBD);
-                chartItemsList.add(currItem);
+                xValsMap.putIfAbsent(lowBD, xValueLowerBound);
+                double xCurr = xValsMap.get(lowBD);
+                chartItemsList.add(new ChartItem(xCurr, lowBD.doubleValue(), lowBD.doubleValue() + tickSize.doubleValue(), symbol));
 
-                double nextXVal = currItem.getXValue() + minInMilliSec + offsetDomainAxis;
-                chartItemMap.put(lowBD, new ChartItem(nextXVal, lowBD.doubleValue(), lowBD.doubleValue() + tickSize.doubleValue(), symbol));
+                double nextXVal = xCurr + minInMilliSec + offsetDomainAxis;
+                xValsMap.put(lowBD, nextXVal);
                 lowBD = lowBD.add(tickSize);
             }
             chartItemsCollections.add(new ChartItemsCollection(chartItemsList));
@@ -164,7 +174,7 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
     private void drawChartItem(ChartItem chartItem, Graphics2D g2, RectangleEdge domainEdge, RectangleEdge rangeEdge,
                                Rectangle2D dataArea, ValueAxis domainAxis, ValueAxis rangeAxis)
     {
-        double y = chartItem.getHigh();
+        double y = chartItem.getLow();
         double x = chartItem.getXValue();
         String text = Character.toString(chartItem.getSymbol());
 
