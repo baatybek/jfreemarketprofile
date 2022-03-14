@@ -27,7 +27,7 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
     private final int timeFrame;
     private final double minInMilliSec = 60000D;
     private double offsetDomainAxis = 1 * minInMilliSec;
-    private List<ChartItemsCollection> chartItemsCollections;
+    private List<ChartItemsSeriesCollection> chartItemsSeriesCollections;
     private boolean drawVolume;
     private transient Paint volumePaint;
     private transient double maxVolume = 0.0D;
@@ -109,6 +109,19 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
         }
     }
 
+    private class ChartItemsSeriesCollection {
+        private List<ChartItemsCollection> seriesData;
+
+        public ChartItemsSeriesCollection(List<ChartItemsCollection> seriesData) {
+            this.seriesData = seriesData;
+        }
+
+        public List<ChartItemsCollection> getSeriesData() {
+            return seriesData;
+        }
+    }
+
+
     private char getSymbol(char symbol) {
         if(symbol == '#') {
             return 'A';
@@ -142,51 +155,54 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
         double tick = rangeAxis.getTickUnit().getSize();
         tickSize = new BigDecimal(Double.toString(tick));
 
-        chartItemsCollections = new ArrayList<>();
+        chartItemsSeriesCollections = new ArrayList<>();
 
         OHLCDataset dataset = (OHLCDataset) xyDataset;
-        int series = 0;
         Map<BigDecimal, Double> xValsMap = new HashMap<>();
-        double xValueLowerBound = dataset.getXValue(series, 0);
         char symbol = '#';
 
-        for(int item = 0; item < dataset.getItemCount(series); item++) {
-            double xValue = dataset.getXValue(series, item);
-            Date date = new Date();
-            date.setTime((long) xValue);
-            symbol = getSymbol(symbol);
+        for(int series = 0; series < dataset.getSeriesCount(); series++) {
+            double xValueLowerBound = dataset.getXValue(series, 0);
+            List<ChartItemsCollection> chartItemsCollections = new ArrayList<>();
+            for(int item = 0; item < dataset.getItemCount(series); item++) {
+                double xValue = dataset.getXValue(series, item);
+                Date date = new Date();
+                date.setTime((long) xValue);
+                symbol = getSymbol(symbol);
 
-            if(xValue >= xValueLowerBound + timeFrame * minInMilliSec) {
-                xValueLowerBound = xValue;
-                symbol = 'A';
-                xValsMap.clear();
-            }
+                if(xValue >= xValueLowerBound + timeFrame * minInMilliSec) {
+                    xValueLowerBound = xValue;
+                    symbol = 'A';
+                    xValsMap.clear();
+                }
 
-            double low = dataset.getLowValue(series, item);
-            BigDecimal lowBD = roundValueWithTickSize(low);
+                double low = dataset.getLowValue(series, item);
+                BigDecimal lowBD = roundValueWithTickSize(low);
 
-            double high = dataset.getHighValue(series, item);
-            BigDecimal highBD = roundValueWithTickSize(high);
+                double high = dataset.getHighValue(series, item);
+                BigDecimal highBD = roundValueWithTickSize(high);
 
-            List<ChartItem> chartItemsList = new ArrayList<>();
+                List<ChartItem> chartItemsList = new ArrayList<>();
 
-            while (highBD.compareTo(lowBD) > 0) {
-                xValsMap.putIfAbsent(lowBD, xValueLowerBound);
-                double xCurr = xValsMap.get(lowBD);
-                chartItemsList.add(new ChartItem(xCurr, lowBD.doubleValue(), lowBD.doubleValue() + tickSize.doubleValue(), symbol));
+                while (highBD.compareTo(lowBD) > 0) {
+                    xValsMap.putIfAbsent(lowBD, xValueLowerBound);
+                    double xCurr = xValsMap.get(lowBD);
+                    chartItemsList.add(new ChartItem(xCurr, lowBD.doubleValue(), lowBD.doubleValue() + tickSize.doubleValue(), symbol));
 
-                double nextXVal = xCurr + minInMilliSec + offsetDomainAxis;
-                xValsMap.put(lowBD, nextXVal);
-                lowBD = lowBD.add(tickSize);
-            }
-            chartItemsCollections.add(new ChartItemsCollection(chartItemsList));
+                    double nextXVal = xCurr + minInMilliSec + offsetDomainAxis;
+                    xValsMap.put(lowBD, nextXVal);
+                    lowBD = lowBD.add(tickSize);
+                }
+                chartItemsCollections.add(new ChartItemsCollection(chartItemsList));
 
-            if(drawVolume) {
-                double volume = dataset.getVolumeValue(series, item);
-                if (volume > this.maxVolume) {
-                    this.maxVolume = volume;
+                if(drawVolume) {
+                    double volume = dataset.getVolumeValue(series, item);
+                    if (volume > this.maxVolume) {
+                        this.maxVolume = volume;
+                    }
                 }
             }
+            chartItemsSeriesCollections.add(new ChartItemsSeriesCollection(chartItemsCollections));
         }
 
         return new XYItemRendererState(info);
@@ -202,7 +218,7 @@ public class MarketProfileRenderer extends AbstractXYItemRenderer implements XYI
 
         setUpFont(g2);
 
-        List<ChartItem> chartItemList = chartItemsCollections.get(item).getData();
+        List<ChartItem> chartItemList = chartItemsSeriesCollections.get(series).getSeriesData().get(item).getData();
         for(ChartItem chartItem : chartItemList) {
             drawChartItem(chartItem, g2, domainEdge, rangeEdge, dataArea, domainAxis, rangeAxis);
         }
