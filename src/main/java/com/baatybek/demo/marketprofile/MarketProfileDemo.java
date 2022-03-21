@@ -2,6 +2,7 @@ package com.baatybek.demo.marketprofile;
 
 import com.baatybek.dataset.DataGenerator;
 import com.baatybek.renderer.MarketProfileRenderer;
+import com.baatybek.utils.datetime.DateTimeUtility;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
@@ -35,7 +36,7 @@ public class MarketProfileDemo extends ApplicationFrame {
         OHLCDataset dataset = DataGenerator.generateDefaultHighLowDataset();
 
         // renderer
-        MarketProfileRenderer renderer = new MarketProfileRenderer(30);
+        MarketProfileRenderer renderer = new MarketProfileRenderer(DateTimeUtility.DEFAULT_DATE_TIME_FORMAT.parse("2021-07-08 09:30:00"), true);
 
         // plot
         ValueAxis timeAxis = new DateAxis("Time");

@@ -2,6 +2,7 @@ package com.baatybek.demo;
 
 import com.baatybek.dataset.DataGenerator;
 import com.baatybek.renderer.MarketProfileRenderer;
+import com.baatybek.utils.datetime.DateTimeUtility;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
@@ -40,8 +41,12 @@ public class MarketProfileCandlestickDemo extends ApplicationFrame {
         XYPlot plot = new XYPlot(null, timeAxis, valueAxis, null);
         plot.setDomainPannable(true);
 
+
         plot.setDataset(0, dataset);
-        plot.setRenderer(0, new MarketProfileRenderer(30));
+        plot.setRenderer(0, new MarketProfileRenderer(DateTimeUtility.DEFAULT_DATE_TIME_FORMAT.parse("2021-07-08 09:30:00"), false));
+        plot.setDataset(1, dataset);
+//        plot.setRenderer(1, new NewMarketProfileRenderer(NewMarketProfileRenderer.DrawMethod.RECTANGLES, 60000,
+//                DateTimeUtility.DEFAULT_DATE_TIME_FORMAT.parse("2021-07-08 09:30:00"),false));
 
         plot.setDataset(1, dataset);
         plot.setRenderer(1, new CandlestickRenderer());
