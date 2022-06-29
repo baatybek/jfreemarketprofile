@@ -1,3 +1,11 @@
+This project focuses on analyzing JFreeChart Java Chart library and specific
+type of financial charts–Market Profile Charts and the goal of this project is to
+extend JFreeChart library to enable rendering Market Profile Charts. Created
+solution allows to render Market Profile Charts with Volume Profiles.
+
+To find out more details about the project: 
+![alt text](https://github.com/baatybek/jfreemarketprofile/blob/master/docs/extension_of_jfree_chart_with_market_profile_charts.pdf)
+
 # jfreemarketprofile
 Project extends JFreeChart Library to generate Market Profile Charts.
 
